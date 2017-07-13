@@ -1,92 +1,137 @@
-import hashlib
+import argparse
 import os
-import re
-
-import tensorflow as tf
-from tensorflow.python.platform import gfile
 
 
-ACCEPTED_EXTENSIONS = ('jpg', 'JPG', 'jpeg', 'JPEG')
-MIN_TRAINING_SET_SIZE = 30
-MAX_TRAINING_SET_SIZE = 2 ** 14 - 1  # 16383
-
-
-def create_image_lists(image_dir, testing_percentage, validation_percentage):
-    """
-    Builds a list of training images from the file system.
-
-    Analyzes the sub folders in the image directory, splits them into stable
-    training, testing, and validation sets, and returns a data structure
-    describing the lists of images for each label and their paths.
-
-    Args:
-        image_dir: String path to a folder containing subfolders of images.
-        testing_percentage: Integer percentage of the images to reserve for tests.
-        validation_percentage: Integer percentage of images reserved for validation.
-
-    Returns:
-        A dictionary containing an entry for each label subfolder, with images split
-        into training, testing, and validation sets within each label.
-    """
-    if not gfile.Exists(image_dir):
-        tf.logging.error("Image directory '{image_dir}' does not exist.".format(image_dir=image_dir))
-        return
-
-    result = {}
-    sub_dirs = [info[0] for info in gfile.Walk(image_dir)]
-    for sub_dir in sub_dirs[1:]:  # first one is root, so skip it.
-        dir_name = os.path.basename(sub_dir)
-        tf.logging.info("Looking for images in '{dir_name}'".format(dir_name=dir_name))
-        file_list = []
-        for extension in ACCEPTED_EXTENSIONS:
-            pattern = os.path.join(sub_dir, '*.{}'.format(extension))
-            file_list.extend(gfile.Glob(pattern))
-
-        # make sure we have enough
-        if len(file_list) < MIN_TRAINING_SET_SIZE:
-            tf.logging.warning(
-                "Directory '{dir_name}' has less than {threshold} images, which may cause issues.".format(
-                    dir_name=dir_name,
-                    threshold=MIN_TRAINING_SET_SIZE,
-                )
-            )
-        elif len(file_list) > MAX_TRAINING_SET_SIZE:
-            tf.logging.warning(
-                "Directory '{dir_name}' has too many images, only {threshold} images will get used.".format(
-                    dir_name=dir_name,
-                    threshold=MAX_TRAINING_SET_SIZE,
-                )
-            )
-        # remove any character that is not alpha or number.
-        label_name = re.sub(r'[^a-z0-9]', ' ', dir_name.lower())
-        training_images = []
-        testing_images = []
-        validation_images = []
-        for file_path in file_list:
-            file_name = os.path.basename(file_path)
-            # Ignore anything that comes after _nohash_ so "walmart1_nohash_qr.jpg" will turn into "walmart1.jpg"
-            # This is a way for the sampler (the person or script who collected the training data) to push same type of
-            # image into the same set (because the hash function would yield the same number).
-            hash_name = re.sub(r'_nohash_.*$', '', file_path)
-            # This is a magic code that would determine which set this particular picture should go in.
-            hash_name_hashed = hashlib.sha1(bytes(hash_name, encoding='utf8')).hexdigest()
-            percentage_hash = (
-                (int(hash_name_hashed, 16) % (MAX_TRAINING_SET_SIZE + 1)) *
-                (100.0 / MAX_TRAINING_SET_SIZE)
-            )
-            if percentage_hash < validation_percentage:
-                validation_images.append(file_name)
-            elif percentage_hash < (testing_percentage + validation_percentage):
-                testing_images.append(file_name)
-            else:
-                training_images.append(file_name)
-        result[label_name] = {
-            'label': dir_name,
-            'training': training_images,
-            'testing': testing_images,
-            'validation': validation_images,
-        }
-    return result
-
-
-print(create_image_lists('./data/training/', 10, 10))
+parser = argparse.ArgumentParser()
+parser.add_argument(
+  '--training_dir',
+  type=str,
+  default=os.environ.get('TRAINING_DIR') or '',
+  help='Path to directory containing the training image data.'
+)
+parser.add_argument(
+  '--output_graph',
+  type=str,
+  default=os.environ.get('OUTPUT_GRAPH') or '/tmp/output_graph.pb',
+  help='Where to save the trained graph.'
+)
+parser.add_argument(
+  '--output_labels',
+  type=str,
+  default=os.environ.get('OUTPUT_LABELS') or '/tmp/output_labels.txt',
+  help='Where to save the trained graph\'s labels.'
+)
+parser.add_argument(
+  '--summaries_dir',
+  type=str,
+  default=os.environ.get('OUTPUT_SUMMARIES') or '/tmp/retrain_logs',
+  help='Where to save summary logs for TensorBoard.'
+)
+parser.add_argument(
+  '--steps_count',
+  type=int,
+  default=int(os.environ.get('STEPS_COUNT', 0)) or 4000,
+  help='How many training steps to run before ending.'
+)
+parser.add_argument(
+  '--learning_rate',
+  type=float,
+  default=float(os.environ.get('LEARNING_RATE', 0)) or 0.01,
+  help='How large a learning rate to use when training.'
+)
+parser.add_argument(
+  '--testing_percentage',
+  type=int,
+  default=int(os.environ.get('TESTING_PERCENTAGE', 0)) or 10,
+  help='What percentage of images to use as a test set.'
+)
+parser.add_argument(
+  '--validation_percentage',
+  type=int,
+  default=int(os.environ.get('VALIDATION_PERCENTAGE', 0)) or 10,
+  help='What percentage of images to use as a validation set.'
+)
+parser.add_argument(
+  '--eval_step_interval',
+  type=int,
+  default=int(os.environ.get('EVAL_STEP_INTERVAL', 0)) or 10,
+  help='How often to evaluate the training results.'
+)
+parser.add_argument(
+  '--train_batch_size',
+  type=int,
+  default=int(os.environ.get('TRAIN_BATCH_SIZE', 0)) or 100,
+  help='How many images to train on at a time.'
+)
+parser.add_argument(
+  '--test_batch_size',
+  type=int,
+  default=int(os.environ.get('TEST_BATCH_SIZE', 0)) or -1,
+  help="""\
+  How many images to test on. This test set is only used once, to evaluate
+  the final accuracy of the model after training completes.
+  A value of -1 causes the entire test set to be used, which leads to more
+  stable results across runs.\
+  """
+)
+parser.add_argument(
+  '--validation_batch_size',
+  type=int,
+  default=int(os.environ.get('VALIDATION_BATCH_SIZE', 0)) or 100,
+  help="""\
+  How many images to use in an evaluation batch. This validation set is
+  used much more often than the test set, and is an early indicator of how
+  accurate the model is during training.
+  A value of -1 causes the entire validation set to be used, which leads to
+  more stable results across training iterations, but may be slower on large
+  training sets.\
+  """
+)
+parser.add_argument(
+  '--print_misclassified_test_images',
+  default=False,
+  help="""\
+  Whether to print out a list of all misclassified test images.\
+  """,
+  action='store_true'
+)
+parser.add_argument(
+  '--model_path',
+  type=str,
+  default=os.environ.get('MODEL_PATH') or '/tmp/imagenet',
+  help='Path to classify_image_graph_def.pb'
+)
+parser.add_argument(
+  '--final_tensor_name',
+  type=str,
+  default=os.environ.get('FINAL_TENSOR_NAME') or 'final_result',
+  help="""\
+  The name of the output classification layer in the retrained graph.\
+  """
+)
+parser.add_argument(
+  '--flip_left_right',
+  default=os.environ.get('ENABLE_HORIZONTAL_FLIP') == 'yes',
+  help="""\
+  Whether to randomly flip half of the training images horizontally.\
+  """,
+  action='store_true'
+)
+parser.add_argument(
+  '--random_scale',
+  type=int,
+  default=int(os.environ.get('RANDOM_SCALE_PERCENTAGE', 0)) or 0,
+  help="""\
+  A percentage determining how much to randomly scale up the size of the
+  training images by.\
+  """
+)
+parser.add_argument(
+  '--random_brightness',
+  type=int,
+  default=int(os.environ.get('RANDOM_BRIGHTNESS_PERCENTAGE', 0)) or 0,
+  help="""\
+  A percentage determining how much to randomly multiply the training image
+  input pixels up or down by.\
+  """
+)
