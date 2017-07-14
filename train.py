@@ -3,15 +3,16 @@ import os
 import sys
 
 import model
+from image_list import create_image_lists
 
 import tensorflow as tf
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-  '--training_dir',
+  '--image_dir',
   type=str,
-  default=os.environ.get('TRAINING_DIR') or '',
+  default=os.environ.get('IMAGE_DIR') or '',
   help='Path to directory containing the training image data.'
 )
 parser.add_argument(
@@ -159,12 +160,11 @@ def main(_):
     # Download and extract the model so it's available locally.
     # Then setup the pre-trained graph
     model.download_and_extract(model_info, dest_dir=FLAGS.model_dir)
-#     graph, bottleneck_tensor, resized_image_tensor = (
-#         create_model_graph(model_info)
-#     )
-#
-#     # Look at the folder structure, and create lists of all the images.
-#     image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage, FLAGS.validation_percentage)
+    graph, bottleneck_tensor, resized_image_tensor = model.create_model_graph(model_info, model_dir=FLAGS.model_dir)
+
+    # Look at the folder structure, and create lists of all the images.
+    image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage, FLAGS.validation_percentage)
+    print(image_lists)
 #     class_count = len(image_lists.keys())
 #     if class_count == 0:
 #         tf.logging.error('No valid folders of images found at ' + FLAGS.image_dir)

@@ -7,7 +7,7 @@ from six.moves import urllib
 import tensorflow as tf
 
 
-def download_and_extract(model, dest_dir):
+def download_and_extract(model_info, dest_dir):
     """
     Download and extract model tar file.
 
@@ -20,7 +20,7 @@ def download_and_extract(model, dest_dir):
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    file_name = os.path.basename(model.data_url)
+    file_name = os.path.basename(model_info.data_url)
     file_path = os.path.join(dest_dir, file_name)
     # if it doesn't exist already, download it.
     if not os.path.exists(file_path):
@@ -33,7 +33,7 @@ def download_and_extract(model, dest_dir):
 
             sys.stdout.flush()
 
-        file_path, _ = urllib.request.urlretrieve(model.data_url, file_path, __progress)
+        file_path, _ = urllib.request.urlretrieve(model_info.data_url, file_path, __progress)
         print()
         file_stats = os.stat(file_path)
         tf.logging.info('Successfully downloaded {file_name} {size}'.format(
