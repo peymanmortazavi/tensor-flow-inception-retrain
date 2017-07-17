@@ -303,7 +303,6 @@ def main(_):
 
     # Look at the folder structure, and create lists of all the images.
     image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage, FLAGS.validation_percentage)
-    print(image_lists)
     if not image_lists:
         tf.logging.error("No valid folders of images found at '{image_dir}'".format(image_dir=FLAGS.image_dir))
         return -1
