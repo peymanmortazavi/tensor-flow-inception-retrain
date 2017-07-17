@@ -2,6 +2,9 @@ import os
 
 import tensorflow as tf
 
+from tensorflow.python.framework import graph_util
+from tensorflow.python.platform import gfile
+
 
 def create_model_graph(model_info, model_dir):
     """
@@ -28,3 +31,13 @@ def create_model_graph(model_info, model_dir):
                 ]
             )
     return graph, bottleneck_tensor, resized_input_tensor
+
+
+def save_graph_to_file(session, graph, graph_file_name, tensor_name):
+    output_graph_def = graph_util.convert_variables_to_constants(
+        session,
+        graph.as_graph_def(),
+        [tensor_name],
+    )
+    with gfile.FastGFile(graph_file_name, 'wb') as f:
+        f.write(output_graph_def.SerializeToString())
