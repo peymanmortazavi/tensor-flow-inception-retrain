@@ -22,5 +22,15 @@ parser.add_argument(
   help='Path to the output directory.'
 )
 
-import pdb
-pdb.set_trace()
+
+FLAGS, _ = parser.parse_known_args()
+access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+
+s3_path_parts = FLAGS.s3_path.split('/')
+bucket_name = s3_path_parts[0]
+file_path = s3_path_parts[1:].join('/')
+
+
+s3.Bucket(bucket_name).download_file(file_path, os.path.join(FLAGS.output, s3_path_parts[-1]))
