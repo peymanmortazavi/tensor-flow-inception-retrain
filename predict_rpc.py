@@ -47,7 +47,8 @@ def run_graph(image_data, labels, input_layer_name, output_layer_name, num_top_p
         for node_id in top_k:
             human_string = labels[node_id]
             score = predictions[node_id]
-            result.append({'score': score, 'label': human_string})
+            result.append({'score': str(100 * score), 'label': human_string})
+        return result
 
 
 # load labels
