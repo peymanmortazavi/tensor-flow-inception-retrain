@@ -30,7 +30,7 @@ secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
 s3_path_parts = FLAGS.s3_path.split('/')
 bucket_name = s3_path_parts[0]
-file_path = s3_path_parts[1:].join('/')
+file_path = '/'.join(s3_path_parts[1:])
 
 
 s3.Bucket(bucket_name).download_file(file_path, os.path.join(FLAGS.output, s3_path_parts[-1]))
