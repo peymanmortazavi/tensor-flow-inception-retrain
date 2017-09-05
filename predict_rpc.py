@@ -4,6 +4,9 @@ from __future__ import print_function
 
 
 import tensorflow as tf
+import cv2
+import numpy as np
+from receipt_cropping.crop_vertical import crop_vertical
 
 import zerorpc
 
@@ -47,22 +50,28 @@ def run_graph(image_data, labels, input_layer_name, output_layer_name, num_top_p
         for node_id in top_k:
             human_string = labels[node_id]
             score = predictions[node_id]
-            result.append({'score': str(100 * score), 'label': human_string})
+            result.append((human_string, score))
         return result
 
 
 # load labels
-labels = load_labels('/tmp/output_labels.txt')
+labels = load_labels('/home/peyman.mortazavi/graph_data/philip_model/output_labels.txt')
 
 # load graph, which is stored in the default session
-load_graph('/tmp/output_graph.pb')
+load_graph('/home/peyman.mortazavi/graph_data/philip_model/output_graph.pb')
 
 
 class TensorFlowAPIHandler(object):
+
     def predict(self, image_data):
-        return run_graph(image_data, labels, 'DecodeJpeg/contents:0', 'final_result:0', 3)
+        np_array = np.fromstring(image_data, np.uint8)
+        image_data = cv2.imdecode(np_array, 0)
+        cropped_image_data = crop_vertical(image_data, 0.5, (299, 299), 0.5)
+        _, buff = cv2.imencode('.jpg', cropped_image_data)
+        best_result = run_graph(np.array(buff).tostring(), labels, 'DecodeJpeg/contents:0', 'final_result:0', 3)[0]
+        return [best_result[0], str(best_result[1] * 100)]
 
 
 s = zerorpc.Server(TensorFlowAPIHandler())
-s.bind("tcp://0.0.0.0:4242")
+s.bind('tcp://0.0.0.0:4242')
 s.run()
