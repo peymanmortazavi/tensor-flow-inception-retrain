@@ -1,2 +1,5 @@
 tensorflow
 boto3
+scikit-image
+numpy
+pillow

@@ -2,11 +2,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
+import os
 import tensorflow as tf
 import cv2
 import numpy as np
-from receipt_cropping.crop_vertical import crop_vertical
+from preprocessing.crop_vertical import crop_vertical
 
 import zerorpc
 
@@ -55,10 +55,10 @@ def run_graph(image_data, labels, input_layer_name, output_layer_name, num_top_p
 
 
 # load labels
-labels = load_labels('/home/peyman.mortazavi/graph_data/philip_model/output_labels.txt')
+labels = load_labels(os.environ.get('MODEL_LABELS'))
 
 # load graph, which is stored in the default session
-load_graph('/home/peyman.mortazavi/graph_data/philip_model/output_graph.pb')
+load_graph(os.environ.get('MODEL_GRAPH'))
 
 
 class TensorFlowAPIHandler(object):

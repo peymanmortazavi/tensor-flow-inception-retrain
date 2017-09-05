@@ -63,13 +63,11 @@ def main():
     if args.size is not None:
         resize = (args.size, args.size)
 
-
-    print 'Source Directory:      ', src
-    print 'Destination Directory: ', dst
-    print 'Scale Factor:          ', scale
-    print 'Clip Percentage:       ', clip * 100.0
-    print 'Output Image Size:      {}px x {}px'.format(resize[0], resize[1])
-    print
+    print('Source Directory:      {}'.format(src))
+    print('Destination Directory: {}'.format(dst))
+    print('Scale Factor:          {}'.format(scale))
+    print('Clip Percentage:       '.format(clip * 100.0))
+    print('Output Image Size:      {}px x {}px\r\n'.format(resize[0], resize[1]))
 
     total_images = count_files(src)
     processed_images = 0
