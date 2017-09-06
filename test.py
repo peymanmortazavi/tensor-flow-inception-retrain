@@ -87,6 +87,7 @@ def process_item():
                 break
             line = queue.get()
             if not line:
+                queue.task_done()
                 break
             parts = line.split(',')
             receipt_id = parts[0]
@@ -100,6 +101,7 @@ def process_item():
                 queue.task_done()
         except Exception as ex:
             print('Error: {}'.format(str(ex)))
+            queue.task_done()
 
 
 writer = open(os.environ.get('OUTPUT_FILE'), 'w')

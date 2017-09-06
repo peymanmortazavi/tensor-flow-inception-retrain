@@ -43,7 +43,7 @@ with open(os.environ.get('RAW_FILE'), 'rb') as reader:
         try:
             precision = precision_map[label] / float(recall_map[label]) * 100.0
         except:
-            precision = 'n/a'
+            precision = 0.00
         print('{} - Recall: {:.2f} ; Precision: {:.2f}'.format(label, recall, precision))
 
     print('\nFalse Positives:\n{}\n'.format('\n'.join(false_positives)))
