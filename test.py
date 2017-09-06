@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 from preprocessing.crop_vertical import crop_vertical
 import urllib.request
+import threading
+from queue import Queue
 
 
 def load_image(filename):
@@ -59,8 +61,12 @@ labels = load_labels(os.environ.get('MODEL_LABELS'))
 # load graph, which is stored in the default session
 load_graph(os.environ.get('MODEL_GRAPH'))
 
+queue = Queue()
+lock = threading.Lock()
+
 
 def predict(image_data):
+    global labels
     np_array = np.fromstring(image_data, np.uint8)
     image_data = cv2.imdecode(np_array, 0)
     cropped_image_data = crop_vertical(image_data, 0.5, (299, 299), 0.5)
@@ -73,15 +79,32 @@ def get_image_data(url):
     return urllib.request.urlopen(url).read()
 
 
-writer = open(os.environ.get('OUTPUT_FILE'), 'wb')
-with open(os.environ.get('TEST_FILE'), 'rb') as reader:
-    for line in reader:
-        line = line.replace('\n', '')
+def process_item():
+    load_graph(os.environ.get('MODEL_GRAPH'))
+    while True:
+        line = queue.get()
+        if not line:
+            break
         parts = line.split(',')
         receipt_id = parts[0]
         correct_banner = ','.join(parts[1:-1])
         image_data = get_image_data(parts[-1])
         prediction, confidence = predict(image_data)
         line = '{},{},{},{}'.format(receipt_id, correct_banner, prediction, confidence)
-        print(line)
-        writer.write(line + '\n')
+        with lock:
+            print(line)
+            writer.write(line + '\n')
+            queue.task_done()
+
+
+writer = open(os.environ.get('OUTPUT_FILE'), 'w')
+with open(os.environ.get('TEST_FILE'), 'rb') as reader:
+    for line in reader.read().decode('utf-8').split('\n'):
+        queue.put(line)
+
+for _ in range(8):
+    t = threading.Thread(target=process_item)
+    t.daemon = True
+    t.start()
+
+queue.join()
