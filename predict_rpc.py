@@ -66,6 +66,7 @@ class TensorFlowAPIHandler(object):
     def predict(self, image_data):
         np_array = np.fromstring(image_data, np.uint8)
         image_data = cv2.imdecode(np_array, 0)
+        image_data = cv2.resize(image_data, (721, 1281), interpolation=cv2.INTER_CUBIC)
         cropped_image_data = crop_vertical(image_data, 0.5, (299, 299), 0.5)
         _, buff = cv2.imencode('.jpg', cropped_image_data)
         best_result = run_graph(np.array(buff).tostring(), labels, 'DecodeJpeg/contents:0', 'final_result:0', 3)[0]

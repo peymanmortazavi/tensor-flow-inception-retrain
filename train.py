@@ -468,6 +468,12 @@ def main(_):
                     )
                 )
 
+            if i % 500 == 0 and i > 0:
+                intermediate_graph_path = os.path.join(os.path.dirname(FLAGS.output_graph), 'graph-{}.pb'.format(i))
+                tf.logging.info('Save intermediate result to : ' +
+                                intermediate_graph_path)
+                model.save_graph_to_file(session, graph, intermediate_graph_path, FLAGS.final_tensor_name)
+
         # We've completed all our training, so run a final test evaluation on
         # some new images we haven't used before.
         test_bottlenecks, test_ground_truth, test_filenames = (
