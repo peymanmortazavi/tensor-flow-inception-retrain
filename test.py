@@ -82,6 +82,8 @@ def get_image_data(url):
 def process_item():
     load_graph(os.environ.get('MODEL_GRAPH'))
     while True:
+        if queue.qsize() == 0:
+            break
         line = queue.get()
         if not line:
             break
