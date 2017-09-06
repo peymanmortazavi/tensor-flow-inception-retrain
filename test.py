@@ -82,21 +82,24 @@ def get_image_data(url):
 def process_item():
     load_graph(os.environ.get('MODEL_GRAPH'))
     while True:
-        if queue.qsize() == 0:
-            break
-        line = queue.get()
-        if not line:
-            break
-        parts = line.split(',')
-        receipt_id = parts[0]
-        correct_banner = ','.join(parts[1:-1])
-        image_data = get_image_data(parts[-1])
-        prediction, confidence = predict(image_data)
-        line = '{},{},{},{}'.format(receipt_id, correct_banner, prediction, confidence)
-        with lock:
-            print(line)
-            writer.write(line + '\n')
-            queue.task_done()
+        try:
+            if queue.qsize() == 0:
+                break
+            line = queue.get()
+            if not line:
+                break
+            parts = line.split(',')
+            receipt_id = parts[0]
+            correct_banner = ','.join(parts[1:-1])
+            image_data = get_image_data(parts[-1])
+            prediction, confidence = predict(image_data)
+            line = '{},{},{},{}'.format(receipt_id, correct_banner, prediction, confidence)
+            with lock:
+                print(line)
+                writer.write(line + '\n')
+                queue.task_done()
+        except Exception as ex:
+            print('Error: {}'.format(str(ex)))
 
 
 writer = open(os.environ.get('OUTPUT_FILE'), 'w')
