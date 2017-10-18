@@ -5,3 +5,7 @@ numpy
 pillow
 opencv-python
 zerorpc
+
+# DJANGO
+Django
+gunicorn
